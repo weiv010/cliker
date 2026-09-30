@@ -24,11 +24,11 @@ const ui = {
   count: $("count"),
   stage: $("stage"),
   fx: $("fx-layer"),
-  hint: $("hint"),
   loading: $("loading"),
   loadingText: $("loading-text"),
   toast: $("toast"),
   soundBtn: $("sound-btn"),
+  soundName: $("sound-name"),
   soundSheet: $("sound-sheet"),
   soundList: $("sound-list"),
   resetBtn: $("reset-btn"),
@@ -126,10 +126,7 @@ ui.resetBtn.addEventListener("click", () => {
 /* ---------------------------------------------------------
  * 3) 3D 뷰어 + 모델 불러오기
  * ------------------------------------------------------- */
-const viewer = new ModelViewer(ui.stage, {
-  onTap: addCount,
-  onInteract: () => ui.hint.classList.add("hide"), // 처음 만지면 안내 문구 숨김
-});
+const viewer = new ModelViewer(ui.stage, { onTap: addCount });
 
 async function loadStudentModel() {
   if (!student.model) {
@@ -162,12 +159,17 @@ document.addEventListener("pointerdown", unlockAudio);
 document.addEventListener("touchend", unlockAudio);
 
 async function setupSound() {
-  // clickSound 는 파일 하나("a.mp3") 또는 여러 개(["a.mp3", "b.mp3"]) 모두 가능
-  const files = [student.clickSound].flat().filter(Boolean);
-  const results = await Promise.all(files.map(async (file, i) => {
+  // clickSound 는 아래 모양 모두 가능
+  //   "a.mp3"                                  → 이름 "내 소리"
+  //   ["a.mp3", "b.mp3"]                       → 이름 "내 소리 1", "내 소리 2"
+  //   [{ name: "청축", file: "a.mp3" }, ...]    → 적어준 이름 그대로
+  const entries = [student.clickSound].flat().filter(Boolean);
+  const results = await Promise.all(entries.map(async (entry, i) => {
+    const file = typeof entry === "string" ? entry : entry.file;
+    const label = entry.name || (entries.length > 1 ? `내 소리 ${i + 1}` : "내 소리");
     const id = i === 0 ? "student" : `student${i + 1}`;
     const ok = await sound.loadFile(id, SOUND_DIR + file);
-    return ok && { id, label: files.length > 1 ? `내 소리 ${i + 1}` : "내 소리", emoji: "🎵" };
+    return ok && { id, label };
   }));
   // 불러오기에 성공한 학생 소리를 기본 소리 앞에 붙임
   soundOptions = [...results.filter(Boolean), ...SOUND_OPTIONS];
@@ -178,13 +180,20 @@ async function setupSound() {
   renderSoundList();
 }
 
+// 소리 목록: 한 줄에 하나씩 (이름 + 오른쪽 선택 동그라미). 소리가 많아지면 목록만 스크롤됨
 function renderSoundList() {
   ui.soundList.innerHTML = "";
   for (const opt of soundOptions) {
+    const selected = opt.id === currentSound;
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "sound-option" + (opt.id === currentSound ? " selected" : "");
-    btn.innerHTML = `<span class="emoji">${opt.emoji}</span><span>${opt.label}</span>`;
+    btn.className = "sound-option" + (selected ? " selected" : "");
+    btn.setAttribute("aria-pressed", selected);
+    const name = document.createElement("span");
+    name.textContent = opt.label; // 이름은 글자로만 넣기 (students.js 값을 그대로 HTML로 쓰지 않음)
+    const radio = document.createElement("span");
+    radio.className = "radio";
+    btn.append(name, radio);
     btn.addEventListener("click", () => {
       currentSound = opt.id;
       store.set(SOUND_KEY, opt.id);
@@ -195,7 +204,7 @@ function renderSoundList() {
     ui.soundList.appendChild(btn);
   }
   const cur = soundOptions.find((o) => o.id === currentSound);
-  ui.soundBtn.innerHTML = `<span class="emoji">${cur.emoji}</span> 소리: ${cur.label}`;
+  ui.soundName.textContent = cur.label;
 }
 
 function openSoundSheet() { ui.soundSheet.classList.add("open"); }

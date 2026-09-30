@@ -54,7 +54,7 @@ assets/backgrounds/   배경 그림(png/jpg/webp)을 넣는 곳
   name: "민수",
   title: "우주 고양이",
   model: "minsu.glb",
-  clickSound: "meow.mp3",              // 여러 개: ["meow.mp3", "purr.mp3"], 없으면 null
+  clickSound: "meow.mp3",              // 여러 개·이름 붙이기: [{ name: "야옹", file: "meow.mp3" }, …], 없으면 null
   background: "space.png",             // 그림 파일, 또는 sky/sunset/forest/night/candy/ocean/paper, 또는 "#ffe4e1"
 },
 ```

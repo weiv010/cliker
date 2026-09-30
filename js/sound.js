@@ -10,12 +10,12 @@
 
 /** 기본 소리 목록 (id는 저장/재생에 사용). 학생 소리 파일은 main.js에서 앞에 추가됨 */
 export const SOUND_OPTIONS = [
-  { id: "pop", label: "뽁", emoji: "🫧" },
-  { id: "boing", label: "뿅", emoji: "🐰" },
-  { id: "bell", label: "딩", emoji: "🔔" },
-  { id: "drum", label: "쿵", emoji: "🥁" },
-  { id: "coin", label: "띠링", emoji: "🪙" },
-  { id: "off", label: "끄기", emoji: "🔇" },
+  { id: "pop", label: "뽁" },
+  { id: "boing", label: "뿅" },
+  { id: "bell", label: "딩" },
+  { id: "drum", label: "쿵" },
+  { id: "coin", label: "띠링" },
+  { id: "off", label: "소리 끄기" },
 ];
 
 export class SoundPlayer {

@@ -11,6 +11,7 @@
  *               (null 이면 내장된 기본 토끼 모델을 보여줌)
  *  clickSound : assets/sounds/ 폴더 안의 소리 파일 이름 (mp3/wav/m4a)
  *               여러 개면 대괄호로 묶기: ["a.mp3", "b.mp3"] → "내 소리 1, 2"
+ *               이름을 붙이려면: [{ name: "청축", file: "a.mp3" }, { name: "적축", file: "b.mp3" }]
  *               (null 이면 파일 없이 기본 효과음만 사용)
  *  background : 배경. 세 가지 방법 중 하나
  *               1) 그림 파일: assets/backgrounds/ 폴더의 파일 이름  예) "sky.png"
@@ -35,7 +36,10 @@ export const STUDENTS = [
     name: "경진",
     title: "네모 키캡",
     model: "cliker.glb",
-    clickSound: ["blue-switch.mp3", "red-switch.mp3"],
+    clickSound: [
+      { name: "청축", file: "blue-switch.mp3" },
+      { name: "적축", file: "red-switch.mp3" },
+    ],
     background: "sky.png",
   },
 
