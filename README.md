@@ -27,6 +27,7 @@ js/sound.js           효과음 (mp3 파일 + 파일 없이 나는 기본음)
 js/effects.js         +1 글자, 숫자 튀기, 알림 메시지
 assets/models/        학생 GLB 파일을 넣는 곳
 assets/sounds/        학생 소리 파일을 넣는 곳
+assets/backgrounds/   배경 그림(png/jpg/webp)을 넣는 곳
 .nojekyll             GitHub Pages가 파일을 그대로 올리도록 하는 빈 파일
 ```
 
@@ -41,7 +42,11 @@ assets/sounds/        학생 소리 파일을 넣는 곳
 학생별 주소를 QR코드로 만들어 나눠주면 편합니다.
 
 ## 학생 추가하기
-1. GLB 파일을 `assets/models/` 에, 소리 파일을 `assets/sounds/` 에 올립니다.
+1. 파일을 알맞은 폴더에 올립니다.
+   - GLB → `assets/models/` · 소리 → `assets/sounds/` · 배경 그림 → `assets/backgrounds/`
+   - GitHub 웹에서 올릴 때: 해당 폴더로 들어간 뒤 **Add file → Upload files**
+   - 새 폴더를 만들 때: **Add file → Create new file** 에서 이름 칸에 `폴더이름/파일이름` 처럼
+     `/` 를 넣으면 폴더가 만들어집니다. (또는 파일 업로드 화면에 폴더째 끌어다 놓기)
 2. `js/students.js` 의 `STUDENTS` 목록에 한 덩어리를 추가합니다.
 ```js
 {
@@ -49,10 +54,12 @@ assets/sounds/        학생 소리 파일을 넣는 곳
   name: "민수",
   title: "우주 고양이",
   model: "minsu.glb",
-  clickSound: "meow.mp3",   // 없으면 null
-  background: "night",      // sky, sunset, forest, night, candy, ocean, paper 또는 "#ffe4e1"
+  clickSound: "meow.mp3",              // 여러 개: ["meow.mp3", "purr.mp3"], 없으면 null
+  background: "space.png",             // 그림 파일, 또는 sky/sunset/forest/night/candy/ocean/paper, 또는 "#ffe4e1"
 },
 ```
+- 배경 그림은 세로 화면에 꽉 차게 잘려서 보입니다. 가운데에 중요한 부분이 오게 하고,
+  용량은 **1MB 이하**(jpg 또는 webp 권장)면 빨리 열립니다.
 - 파일 이름은 **영어 소문자·숫자·`-`·`_`만** 쓰는 것을 권장합니다 (한글·띄어쓰기 X).
 - 대소문자를 정확히 맞춰야 합니다 (`Rabbit.GLB` ≠ `rabbit.glb`).
 - 모델 파일이 없거나 이름이 틀리면 기본 토끼가 대신 나오고 안내 메시지가 뜹니다.

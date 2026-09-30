@@ -13,6 +13,7 @@ import { spawnPlusOne, bump, showToast, isMilestone } from "./effects.js";
 
 const MODEL_DIR = "assets/models/";
 const SOUND_DIR = "assets/sounds/";
+const BG_DIR = "assets/backgrounds/";
 const BG_PRESETS = ["sky", "sunset", "forest", "night", "candy", "ocean", "paper"];
 
 // 자주 쓰는 화면 요소
@@ -72,13 +73,23 @@ document.title = `${student.title} · 3D 클리커`;
 ui.title.textContent = student.title;
 ui.name.textContent = student.id === DEMO_STUDENT.id ? "체험 모드" : `${student.name}의 작품`;
 
-// 배경: 이름이 프리셋이면 CSS 클래스로, 아니면 CSS 색상 값으로 바로 적용
+// 배경 적용 (3가지 방식)
+//  - "sky" 같은 프리셋 이름 → CSS에 미리 만들어 둔 그라데이션
+//  - "sky.png" 같은 그림 파일 → assets/backgrounds/ 폴더의 그림을 화면에 꽉 채움
+//  - 그 밖의 값 → CSS 색상 그대로 ("#ffe4e1", "linear-gradient(...)")
 const bg = student.background || "sky";
 if (BG_PRESETS.includes(bg)) {
   document.body.dataset.bg = bg;
+} else if (/\.(png|jpe?g|webp|gif)$/i.test(bg)) {
+  document.body.dataset.bg = "image";
+  // CSS 변수 안의 상대 경로는 css/ 폴더 기준으로 해석되므로 전체 주소로 바꿔서 넣음
+  const url = new URL(BG_DIR + bg, document.baseURI).href;
+  // 그림을 불러오는 동안·실패했을 때는 하늘색 그라데이션이 보이도록 뒤에 깔아 둠
+  document.body.style.setProperty("--bg",
+    `url("${url}") center / cover no-repeat, linear-gradient(180deg, #8fd3ff, #ffffff)`);
 } else {
   document.body.dataset.bg = "custom";
-  document.body.style.background = bg;
+  document.body.style.setProperty("--bg", bg);
 }
 
 if (missingId) {
@@ -142,7 +153,7 @@ async function loadStudentModel() {
  * 소리 고르기
  * ------------------------------------------------------- */
 const sound = new SoundPlayer();
-let hasStudentSound = false;
+let soundOptions = SOUND_OPTIONS; // 화면에 보여줄 소리 목록 (학생 소리 + 기본 소리)
 let currentSound = "pop";
 
 // 모바일은 첫 터치 때 오디오를 깨워야 소리가 난다
@@ -151,20 +162,25 @@ document.addEventListener("pointerdown", unlockAudio);
 document.addEventListener("touchend", unlockAudio);
 
 async function setupSound() {
-  if (student.clickSound) {
-    hasStudentSound = await sound.loadFile("student", SOUND_DIR + student.clickSound);
-  }
-  // 저장해 둔 선택 → 없으면 학생 소리 → 없으면 "뽁"
+  // clickSound 는 파일 하나("a.mp3") 또는 여러 개(["a.mp3", "b.mp3"]) 모두 가능
+  const files = [student.clickSound].flat().filter(Boolean);
+  const results = await Promise.all(files.map(async (file, i) => {
+    const id = i === 0 ? "student" : `student${i + 1}`;
+    const ok = await sound.loadFile(id, SOUND_DIR + file);
+    return ok && { id, label: files.length > 1 ? `내 소리 ${i + 1}` : "내 소리", emoji: "🎵" };
+  }));
+  // 불러오기에 성공한 학생 소리를 기본 소리 앞에 붙임
+  soundOptions = [...results.filter(Boolean), ...SOUND_OPTIONS];
+
+  // 저장해 둔 선택 → 없으면 학생 첫 소리 → 없으면 "뽁"
   const saved = store.get(SOUND_KEY);
-  const available = SOUND_OPTIONS.filter((o) => o.id !== "student" || hasStudentSound).map((o) => o.id);
-  currentSound = available.includes(saved) ? saved : hasStudentSound ? "student" : "pop";
+  currentSound = soundOptions.some((o) => o.id === saved) ? saved : soundOptions[0].id;
   renderSoundList();
 }
 
 function renderSoundList() {
   ui.soundList.innerHTML = "";
-  for (const opt of SOUND_OPTIONS) {
-    if (opt.id === "student" && !hasStudentSound) continue;
+  for (const opt of soundOptions) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "sound-option" + (opt.id === currentSound ? " selected" : "");
@@ -178,7 +194,7 @@ function renderSoundList() {
     });
     ui.soundList.appendChild(btn);
   }
-  const cur = SOUND_OPTIONS.find((o) => o.id === currentSound);
+  const cur = soundOptions.find((o) => o.id === currentSound);
   ui.soundBtn.innerHTML = `<span class="emoji">${cur.emoji}</span> 소리: ${cur.label}`;
 }
 

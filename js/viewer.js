@@ -41,6 +41,8 @@ export class ModelViewer {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 폰 발열/성능을 위해 최대 2배
     this.renderer.setClearColor(0x000000, 0);
+    // 밝은 색 모델이 하얗게 날아가지 않도록 색은 유지하면서 밝기만 부드럽게 눌러줌
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.canvas = this.renderer.domElement;
     container.appendChild(this.canvas);
 
@@ -55,9 +57,10 @@ export class ModelViewer {
     this.camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
     this.zoom = 1;
 
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.3));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-    sun.position.set(2, 4, 3);
+    // 위(하늘색)·아래(회색)에서 은은하게 + 오른쪽 위 햇빛 → 면마다 밝기가 달라 입체감이 생김
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x667788, 0.9));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+    sun.position.set(3, 5, 2);
     this.scene.add(sun);
 
     // ----- 모델을 담는 그룹 구조 -----
@@ -130,7 +133,8 @@ export class ModelViewer {
     this.model = new THREE.Group();
     this.model.add(fit);
     this.pivot.add(this.model);
-    this.pivot.quaternion.identity(); // 회전 초기화
+    // 처음에는 살짝 위에서 비스듬히 내려다보는 각도로 시작 (정면만 보이면 입체감이 없음)
+    this.pivot.quaternion.setFromEuler(new THREE.Euler(0.35, -0.5, 0));
   }
 
   /* -------------------------------------------------------
