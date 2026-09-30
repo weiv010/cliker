@@ -138,7 +138,7 @@ async function loadStudentModel() {
       ui.loadingText.textContent = ratio == null
         ? "모델 불러오는 중…"
         : `모델 불러오는 중… ${Math.round(ratio * 100)}%`;
-    });
+    }, { pressPart: student.pressPart, pressDepth: student.pressDepth });
   } catch (err) {
     console.error(err);
     viewer.setModel(createPlaceholderBunny());

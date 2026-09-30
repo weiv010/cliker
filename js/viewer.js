@@ -102,12 +102,19 @@ export class ModelViewer {
    * 모델 불러오기
    * ----------------------------------------------------- */
 
-  /** GLB 파일을 불러와 화면에 표시. onProgress(0~1 또는 null) */
-  async loadModel(url, onProgress) {
+  /**
+   * GLB 파일을 불러와 화면에 표시. onProgress(0~1 또는 null)
+   * options.pressPart  : 누를 때 움직일 부품 이름 (예: 키캡의 "A")
+   * options.pressDepth : 얼마나 깊이 들어갈지 (0~1, 기본 0.4)
+   */
+  async loadModel(url, onProgress, { pressPart, pressDepth } = {}) {
     const gltf = await this.loader.loadAsync(url, (e) => {
       onProgress?.(e.total ? e.loaded / e.total : null);
     });
+    // 크기 맞추기 전에(= GLB 원래 좌표에서) 움직일 부품과 거리를 계산해 둠
+    const press = pressPart ? this._preparePressPart(gltf.scene, pressPart, pressDepth) : null;
     this.setModel(gltf.scene);
+    this.pressPart = press;
 
     // GLB 안에 움직임(애니메이션)이 들어 있으면 반복 재생
     if (gltf.animations?.length) {
@@ -116,10 +123,43 @@ export class ModelViewer {
     }
   }
 
+  /**
+   * 키캡처럼 "부품 하나만 눌리는" 움직임 준비.
+   * 부품(A)의 아래쪽에 있는 나머지(B)의 윗면까지 얼마나 내려갈 수 있는지 계산한다.
+   */
+  _preparePressPart(root, name, depthRatio = 0.4) {
+    const part = root.getObjectByName(name);
+    if (!part) {
+      console.warn(`모델 안에서 '${name}' 부품을 찾지 못했어요. 모델 전체가 눌리는 효과로 대신합니다.`);
+      return null;
+    }
+    root.updateMatrixWorld(true);
+
+    // 움직일 부품의 상자와, 나머지 부품 전체의 상자
+    const partBox = new THREE.Box3().setFromObject(part);
+    const restBox = new THREE.Box3();
+    root.traverse((o) => {
+      if (o.isMesh && !isInside(o, part)) restBox.expandByObject(o);
+    });
+
+    // 받침(B) 윗면보다 튀어나온 높이의 depthRatio 만큼 내려감
+    // (받침이 없거나 계산이 이상하면 부품 높이의 15%)
+    const exposed = restBox.isEmpty() ? 0 : partBox.max.y - restBox.max.y;
+    const depth = exposed > 0 ? exposed * depthRatio : (partBox.max.y - partBox.min.y) * 0.15;
+
+    // 모델 좌표에서 "아래로 depth" 를 부품의 부모 기준 이동량으로 바꿈
+    const from = new THREE.Vector3().setFromMatrixPosition(part.matrixWorld);
+    const to = from.clone().add(new THREE.Vector3(0, -depth, 0));
+    const offset = part.parent.worldToLocal(to).sub(part.parent.worldToLocal(from.clone()));
+
+    return { object: part, rest: part.position.clone(), offset, pos: 0, vel: 0, hold: 0, bottomed: false };
+  }
+
   /** 3D 객체를 화면 가운데에 알맞은 크기로 배치 */
   setModel(object) {
     if (this.model) this.pivot.remove(this.model);
     this.mixer = null;
+    this.pressPart = null;
 
     // 모델마다 크기와 원점이 제각각이므로
     // "반지름 1인 공" 안에 딱 들어가도록 크기와 위치를 자동 조정
@@ -201,7 +241,12 @@ export class ModelViewer {
       // 짧게 누르고 거의 안 움직였으면 = 탭
       const isTap = !cancelled && !p.dragging && !this.pinched && now - p.startTime < TAP_TIME_LIMIT;
       if (isTap && this._hitTest(e.clientX, e.clientY)) {
-        this.pressVel -= 4.5; // 눌림 애니메이션 시작
+        if (this.pressPart) {
+          // 키캡 모드: 손가락이 잠깐 꾹 눌러 바닥까지 내림 (연타해도 매번 다시 눌림)
+          this.pressPart.hold = PART_HOLD_TIME;
+        } else {
+          this.pressVel -= 4.5; // 모델 전체 눌림 애니메이션 시작
+        }
         this.onTap?.(e.clientX, e.clientY);
       }
 
@@ -306,12 +351,69 @@ export class ModelViewer {
     // 위아래로 납작해지면 옆으로 퍼지게 (부피감 유지)
     this.squash.scale.set(1 - p * 0.6, 1 + p, 1 - p * 0.6);
 
+    // --- 키캡 모드: 부품(A)이 내려가 받침(B)에 부딪친 뒤 스프링으로 올라옴 ---
+    if (this.pressPart) this._updatePressPart(dt);
+
     // --- 가만히 있을 때 살짝 둥실둥실 ---
     this.squash.position.y = Math.sin(t * 1.6) * 0.03;
 
     this.mixer?.update(dt);
     this.renderer.render(this.scene, this.camera);
   }
+
+  /**
+   * 키캡 움직임 (실제 기계식 키보드처럼)
+   *  pos =  0 : 원래 자리 (맨 위)
+   *  pos = -1 : 맨 아래 (받침 B에 닿음)
+   * 1) 손가락이 잠깐(PART_HOLD_TIME) 꾹 눌러 바닥까지 내림
+   * 2) 바닥(B)에 "탁" 닿으면 모델 전체가 살짝 울림
+   * 3) 손을 떼면 스프링이 위로 밀어 올리고, 맨 위에서 살짝 튕기며 멈춤
+   */
+  _updatePressPart(dt) {
+    const s = this.pressPart;
+    // 한 프레임을 잘게 나눠 계산 → 빠르게 부딪쳐도 뚫고 지나가지 않음
+    const steps = 4;
+    const h = dt / steps;
+    for (let i = 0; i < steps; i++) {
+      if (s.hold > 0) {
+        s.hold -= h;
+        s.vel = -PART_PUSH_SPEED; // 손가락이 누르는 중: 일정한 속도로 내려감
+      } else {
+        s.vel += (-PART_SPRING * s.pos - PART_DAMPING * s.vel) * h; // 스프링이 위로
+      }
+      s.pos += s.vel * h;
+
+      // 바닥(B)에 부딪침
+      if (s.pos < -1) {
+        s.pos = -1;
+        if (!s.bottomed) this.pressVel -= 0.9; // 닿는 순간 한 번만 "툭"
+        s.bottomed = true;
+        s.vel = s.hold > 0 ? 0 : -s.vel * PART_BOTTOM_BOUNCE;
+      } else if (s.pos > -0.9) {
+        s.bottomed = false;
+      }
+      // 맨 위(원래 자리)보다 더 올라가지 않음: 살짝 걸리며 멈춤
+      if (s.pos > 0) {
+        s.pos = 0;
+        if (s.vel > 0) s.vel = -s.vel * PART_TOP_BOUNCE;
+      }
+    }
+    s.object.position.copy(s.rest).addScaledVector(s.offset, -s.pos);
+  }
+}
+
+// 키캡 움직임 감도
+const PART_PUSH_SPEED = 22; // 누를 때 내려가는 속도 (클수록 빠르게 "탁")
+const PART_HOLD_TIME = 0.07; // 손가락이 누르고 있는 시간(초). 이 동안 바닥까지 내려감
+const PART_SPRING = 320; // 올라오는 스프링 세기
+const PART_DAMPING = 11; // 흔들림 줄이는 마찰
+const PART_BOTTOM_BOUNCE = 0.25; // 바닥에 부딪쳤을 때 튕기는 정도
+const PART_TOP_BOUNCE = 0.2; // 맨 위에 돌아왔을 때 튕기는 정도
+
+/** obj 가 parent 자신이거나 그 안에 들어 있는지 */
+function isInside(obj, parent) {
+  for (let o = obj; o; o = o.parent) if (o === parent) return true;
+  return false;
 }
 
 // 매 프레임 새로 만들지 않도록 재사용하는 임시 객체

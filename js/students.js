@@ -13,6 +13,9 @@
  *               여러 개면 대괄호로 묶기: ["a.mp3", "b.mp3"] → "내 소리 1, 2"
  *               이름을 붙이려면: [{ name: "청축", file: "a.mp3" }, { name: "적축", file: "b.mp3" }]
  *               (null 이면 파일 없이 기본 효과음만 사용)
+ *  pressPart  : (선택) 누를 때 모델 전체 대신 "이 부품만" 눌리게 할 때, 부품 이름
+ *               Blender·Nomad에서 붙인 오브젝트 이름 그대로. 예) 키캡 "A"
+ *  pressDepth : (선택) 부품이 받침 위로 튀어나온 높이 중 얼마나 내려갈지 0~1 (기본 0.4)
  *  background : 배경. 세 가지 방법 중 하나
  *               1) 그림 파일: assets/backgrounds/ 폴더의 파일 이름  예) "sky.png"
  *               2) 준비된 이름: sky, sunset, forest, night, candy, ocean, paper
@@ -41,6 +44,7 @@ export const STUDENTS = [
       { name: "적축", file: "red-switch.mp3" },
     ],
     background: "sky.png",
+    pressPart: "A", // 누르면 위 키캡(A)만 내려갔다가 받침(B)에 부딪치고 올라옴
   },
 
   // ↓ 새 학생 예시 (앞의 // 를 지우면 사용됩니다)
