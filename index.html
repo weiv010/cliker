@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <!-- 모바일: 화면 폭에 맞추고, 확대 금지, 아이폰 노치 영역까지 사용 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#8fd3ff" />
+  <title>3D 클리커</title>
+
+  <!-- 귀여운 한글 글꼴 (Google Fonts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Three.js를 npm 설치 없이 CDN에서 바로 불러오기 (import map) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body data-bg="sky">
+  <!-- 3D 모델이 그려지는 곳 (화면 전체) -->
+  <div id="stage"></div>
+
+  <!-- +1 글자가 떠오르는 층 -->
+  <div id="fx-layer"></div>
+
+  <!-- 화면 위에 겹쳐 보이는 정보 (제목, 카운트, 버튼) -->
+  <div class="hud">
+    <header class="top">
+      <p id="student-name" class="student-name">&nbsp;</p>
+      <h1 id="title" class="title">3D 클리커</h1>
+      <div class="counter">
+        <span id="count" class="count">0</span>
+        <span class="count-label">번 눌렀어요</span>
+      </div>
+    </header>
+
+    <p id="hint" class="hint">👆 톡 누르면 +1 · 끌어서 빙글빙글</p>
+
+    <footer class="bottom">
+      <button id="sound-btn" class="pill" type="button">🫧 소리: 뽁</button>
+    </footer>
+  </div>
+
+  <!-- 소리 고르기 창 (아래에서 올라오는 시트) -->
+  <div id="sound-sheet" class="sheet-backdrop">
+    <div class="sheet" role="dialog" aria-label="소리 고르기">
+      <div class="sheet-head">
+        <h2>소리 고르기</h2>
+        <button class="close" type="button" data-close aria-label="닫기">✕</button>
+      </div>
+      <div id="sound-list" class="sound-list"></div>
+      <button id="reset-btn" class="reset" type="button">↺ 카운트 0으로 되돌리기</button>
+    </div>
+  </div>
+
+  <!-- 알림 메시지 -->
+  <div id="toast" class="toast" role="status"></div>
+
+  <!-- 불러오는 중 화면 -->
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p id="loading-text">준비 중…</p>
+  </div>
+
+  <script>
+    // 파일을 더블클릭해서(file://) 열면 보안 정책 때문에 동작하지 않아서 안내
+    if (location.protocol === "file:") {
+      document.getElementById("loading-text").innerHTML =
+        "파일을 직접 열면 동작하지 않아요.<br>GitHub Pages 주소나 로컬 서버로 열어주세요.";
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
