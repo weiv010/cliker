@@ -31,10 +31,10 @@ export const STUDENTS = [
   {
     id: "001",
     name: "경진",
-    title: "나의 토끼",
-    model: "gyeongjin.glb",
-    clickSound: "pop.mp3",
-    background: "sky",
+    title: "네모 키캡",
+    model: "cliker.glb",
+    clickSound: "blue-switch.mp3",
+    background: "sky.png",
   },
 
   // ↓ 새 학생 예시 (앞의 // 를 지우면 사용됩니다)
